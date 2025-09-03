@@ -4,7 +4,7 @@
   "metadata": {
     "colab": {
       "provenance": [],
-      "authorship_tag": "ABX9TyPkphnVlpqFFtkngrW8fn+W",
+      "authorship_tag": "ABX9TyOyFoOlddBHQxmwAPGv76wZ",
       "include_colab_link": true
     },
     "kernelspec": {
@@ -29,69 +29,6 @@
     {
       "cell_type": "code",
       "source": [
-        "from google.colab import drive\n",
-        "drive.mount('/content/drive')\n"
-      ],
-      "metadata": {
-        "colab": {
-          "base_uri": "https://localhost:8080/"
-        },
-        "id": "rjv1VNLvXaqi",
-        "outputId": "8c978a2b-f8f6-458b-dd8f-358a723ca53f"
-      },
-      "execution_count": 2,
-      "outputs": [
-        {
-          "output_type": "stream",
-          "name": "stdout",
-          "text": [
-            "Mounted at /content/drive\n"
-          ]
-        }
-      ]
-    },
-    {
-      "cell_type": "code",
-      "source": [
-        "import os\n",
-        "\n",
-        "# List files in MyDrive\n",
-        "os.listdir(\"/content/drive/MyDrive\")\n",
-        "\n"
-      ],
-      "metadata": {
-        "colab": {
-          "base_uri": "https://localhost:8080/"
-        },
-        "id": "Gdw4kzwNYTCP",
-        "outputId": "4e0ad98a-b7b9-4575-9dc9-8ff4ef7964d5"
-      },
-      "execution_count": 9,
-      "outputs": [
-        {
-          "output_type": "execute_result",
-          "data": {
-            "text/plain": [
-              "['Colab Notebooks',\n",
-              " 'Assignment 2 Q3 CMH .pptx',\n",
-              " 'Assignment 2 Q2 CMH .pptx',\n",
-              " 'Assignment 2 Q1 CMH.pptx',\n",
-              " 'Google AI Studio',\n",
-              " 'Resume Rickarya Das.gdoc',\n",
-              " 'Resume Rickarya Das.pdf',\n",
-              " 'Resume Rickarya Das1.gdoc',\n",
-              " 'Institute ID.jpg',\n",
-              " 'PIS']"
-            ]
-          },
-          "metadata": {},
-          "execution_count": 9
-        }
-      ]
-    },
-    {
-      "cell_type": "code",
-      "source": [
         "!pip install torch torchvision matplotlib pydicom\n",
         "import zipfile, pydicom, io, numpy as np\n",
         "from PIL import Image\n",
@@ -103,10 +40,10 @@
         "colab": {
           "base_uri": "https://localhost:8080/"
         },
-        "id": "Au1MqeQsbH2C",
-        "outputId": "6ed38864-0516-420c-cbeb-4fd6853eea9f"
+        "id": "rjv1VNLvXaqi",
+        "outputId": "c09e05e5-5c54-4da4-8055-8cf96f9a82d0"
       },
-      "execution_count": 8,
+      "execution_count": 1,
       "outputs": [
         {
           "output_type": "stream",
@@ -157,33 +94,30 @@
     {
       "cell_type": "code",
       "source": [
-        "import zipfile, os\n",
+        "from google.colab import drive\n",
+        "drive.mount('/content/drive')\n",
         "\n",
-        "zip_path = '/content/drive/MyDrive/PIS/DCM.zip'\n",
+        "import os, zipfile\n",
+        "# Copy to Colab local for speed\n",
+        "if not os.path.exists('/content/DCM.zip'):\n",
+        "    !cp \"/content/drive/MyDrive/PIS/DCM.zip\" \"/content/DCM.zip\"\n",
+        "\n",
+        "zip_path = '/content/DCM.zip'\n",
         "z = zipfile.ZipFile(zip_path)\n",
         "\n",
-        "# List all image DICOM slice file paths\n",
-        "img_slice_paths = [\n",
-        "    f for f in z.namelist()\n",
-        "    if f.startswith('DCM/Task1/ImagesTr/') and f.lower().endswith('.dcm')\n",
-        "]\n",
+        "# Find image slice paths\n",
+        "img_slice_paths = [f for f in z.namelist()\n",
+        "                   if f.startswith('DCM/Task1/ImagesTr/') and f.lower().endswith('.dcm')]\n",
         "\n",
-        "# Extract folders (patient/volume IDs) as f.split('/')[3]\n",
+        "# Extract all folder IDs (patients/volumes)\n",
         "folders = sorted(set(f.split('/')[3] for f in img_slice_paths))\n",
-        "print('Folders found:', folders)\n",
+        "print(f'Folders found: {folders[:10]}... Total: {len(folders)}')\n",
         "\n",
+        "# Pair up images and masks by basename within each folder\n",
         "img_files, lbl_files = [], []\n",
         "for folder in folders:\n",
-        "    imgs = sorted([\n",
-        "        f for f in img_slice_paths\n",
-        "        if f.startswith(f'DCM/Task1/ImagesTr/{folder}/IMG') and f.lower().endswith('.dcm')\n",
-        "    ])\n",
-        "    lbls = sorted([\n",
-        "        f for f in z.namelist()\n",
-        "        if f.startswith(f'DCM/Task1/LabelsTr/{folder}/IMG') and f.lower().endswith('.dcm')\n",
-        "    ])\n",
-        "\n",
-        "    # Pair by basename\n",
+        "    imgs = [f for f in img_slice_paths if f.startswith(f'DCM/Task1/ImagesTr/{folder}/IMG')]\n",
+        "    lbls = [f for f in z.namelist() if f.startswith(f'DCM/Task1/LabelsTr/{folder}/IMG')]\n",
         "    img_dict = {os.path.basename(f): f for f in imgs}\n",
         "    lbl_dict = {os.path.basename(f): f for f in lbls}\n",
         "    for fname in img_dict:\n",
@@ -191,30 +125,271 @@
         "            img_files.append(img_dict[fname])\n",
         "            lbl_files.append(lbl_dict[fname])\n",
         "\n",
-        "print(f'Total number of paired slices: {len(img_files)}')\n",
-        "print('Sample image:', img_files[:150])\n",
-        "print('Sample mask :', lbl_files[:150])\n"
+        "print(f'Total paired slices: {len(img_files)}')\n",
+        "print('Sample image:', img_files[:3])\n",
+        "print('Sample mask :', lbl_files[:3])\n",
+        "\n"
       ],
       "metadata": {
         "colab": {
           "base_uri": "https://localhost:8080/"
         },
-        "id": "jY1MLB4Ghwsp",
-        "outputId": "40746446-cfb2-471c-88cc-a6b04251a481"
+        "id": "Gdw4kzwNYTCP",
+        "outputId": "1d472d84-e1cd-4b65-c038-3749e526ebe6"
       },
-      "execution_count": 32,
+      "execution_count": 2,
       "outputs": [
         {
           "output_type": "stream",
           "name": "stdout",
           "text": [
-            "Folders found: ['10000', '10001', '10002', '10006', '10007', '10011', '10012', '10014', '10015', '10016', '10017', '10018', '10019', '10021', '10023', '10025', '10026', '10027', '10028', '10029', '10030', '10031', '10032', '10033', '10034', '10037', '10038', '10039', '10040', '10041', '10042', '10044', '10046', '10047', '10048', '10049', '10050', '10051', '10053', '10054', '10055', '10057', '10058', '10059', '10060', '10061', '10063', '10066', '10067', '10068', '10070', '10072', '10074', '10075', '10077', '10078', '10080', '10083', '10084', '10085', '10087', '10088', '10089', '10090', '10091', '10092', '10093', '10094', '10095', '10099', '10100', '10102', '10103', '10105', '10106', '10108', '10110', '10112', '10113', '10115', '10116', '10117', '10118', '10120', '10121', '10123', '10125', '10128', '10129', '10131', '10132', '10133']\n",
-            "Total number of paired slices: 6816\n",
-            "Sample image: ['DCM/Task1/ImagesTr/10000/IMG0001.dcm', 'DCM/Task1/ImagesTr/10000/IMG0002.dcm', 'DCM/Task1/ImagesTr/10000/IMG0003.dcm', 'DCM/Task1/ImagesTr/10000/IMG0004.dcm', 'DCM/Task1/ImagesTr/10000/IMG0005.dcm', 'DCM/Task1/ImagesTr/10000/IMG0006.dcm', 'DCM/Task1/ImagesTr/10000/IMG0007.dcm', 'DCM/Task1/ImagesTr/10000/IMG0008.dcm', 'DCM/Task1/ImagesTr/10000/IMG0009.dcm', 'DCM/Task1/ImagesTr/10000/IMG0010.dcm', 'DCM/Task1/ImagesTr/10000/IMG0011.dcm', 'DCM/Task1/ImagesTr/10000/IMG0012.dcm', 'DCM/Task1/ImagesTr/10000/IMG0013.dcm', 'DCM/Task1/ImagesTr/10000/IMG0014.dcm', 'DCM/Task1/ImagesTr/10000/IMG0015.dcm', 'DCM/Task1/ImagesTr/10000/IMG0016.dcm', 'DCM/Task1/ImagesTr/10000/IMG0017.dcm', 'DCM/Task1/ImagesTr/10000/IMG0018.dcm', 'DCM/Task1/ImagesTr/10000/IMG0019.dcm', 'DCM/Task1/ImagesTr/10000/IMG0020.dcm', 'DCM/Task1/ImagesTr/10000/IMG0021.dcm', 'DCM/Task1/ImagesTr/10000/IMG0022.dcm', 'DCM/Task1/ImagesTr/10000/IMG0023.dcm', 'DCM/Task1/ImagesTr/10000/IMG0024.dcm', 'DCM/Task1/ImagesTr/10000/IMG0025.dcm', 'DCM/Task1/ImagesTr/10000/IMG0026.dcm', 'DCM/Task1/ImagesTr/10000/IMG0027.dcm', 'DCM/Task1/ImagesTr/10000/IMG0028.dcm', 'DCM/Task1/ImagesTr/10000/IMG0029.dcm', 'DCM/Task1/ImagesTr/10000/IMG0030.dcm', 'DCM/Task1/ImagesTr/10000/IMG0031.dcm', 'DCM/Task1/ImagesTr/10000/IMG0032.dcm', 'DCM/Task1/ImagesTr/10000/IMG0033.dcm', 'DCM/Task1/ImagesTr/10000/IMG0034.dcm', 'DCM/Task1/ImagesTr/10000/IMG0035.dcm', 'DCM/Task1/ImagesTr/10000/IMG0036.dcm', 'DCM/Task1/ImagesTr/10000/IMG0037.dcm', 'DCM/Task1/ImagesTr/10000/IMG0038.dcm', 'DCM/Task1/ImagesTr/10000/IMG0039.dcm', 'DCM/Task1/ImagesTr/10000/IMG0040.dcm', 'DCM/Task1/ImagesTr/10000/IMG0041.dcm', 'DCM/Task1/ImagesTr/10000/IMG0042.dcm', 'DCM/Task1/ImagesTr/10000/IMG0043.dcm', 'DCM/Task1/ImagesTr/10000/IMG0044.dcm', 'DCM/Task1/ImagesTr/10000/IMG0045.dcm', 'DCM/Task1/ImagesTr/10000/IMG0046.dcm', 'DCM/Task1/ImagesTr/10000/IMG0047.dcm', 'DCM/Task1/ImagesTr/10000/IMG0048.dcm', 'DCM/Task1/ImagesTr/10000/IMG0049.dcm', 'DCM/Task1/ImagesTr/10000/IMG0050.dcm', 'DCM/Task1/ImagesTr/10000/IMG0051.dcm', 'DCM/Task1/ImagesTr/10000/IMG0052.dcm', 'DCM/Task1/ImagesTr/10000/IMG0053.dcm', 'DCM/Task1/ImagesTr/10000/IMG0054.dcm', 'DCM/Task1/ImagesTr/10000/IMG0055.dcm', 'DCM/Task1/ImagesTr/10000/IMG0056.dcm', 'DCM/Task1/ImagesTr/10000/IMG0057.dcm', 'DCM/Task1/ImagesTr/10000/IMG0058.dcm', 'DCM/Task1/ImagesTr/10000/IMG0059.dcm', 'DCM/Task1/ImagesTr/10000/IMG0060.dcm', 'DCM/Task1/ImagesTr/10000/IMG0061.dcm', 'DCM/Task1/ImagesTr/10000/IMG0062.dcm', 'DCM/Task1/ImagesTr/10000/IMG0063.dcm', 'DCM/Task1/ImagesTr/10000/IMG0064.dcm', 'DCM/Task1/ImagesTr/10000/IMG0065.dcm', 'DCM/Task1/ImagesTr/10000/IMG0066.dcm', 'DCM/Task1/ImagesTr/10000/IMG0067.dcm', 'DCM/Task1/ImagesTr/10000/IMG0068.dcm', 'DCM/Task1/ImagesTr/10000/IMG0069.dcm', 'DCM/Task1/ImagesTr/10000/IMG0070.dcm', 'DCM/Task1/ImagesTr/10000/IMG0071.dcm', 'DCM/Task1/ImagesTr/10000/IMG0072.dcm', 'DCM/Task1/ImagesTr/10001/IMG0001.dcm', 'DCM/Task1/ImagesTr/10001/IMG0002.dcm', 'DCM/Task1/ImagesTr/10001/IMG0003.dcm', 'DCM/Task1/ImagesTr/10001/IMG0004.dcm', 'DCM/Task1/ImagesTr/10001/IMG0005.dcm', 'DCM/Task1/ImagesTr/10001/IMG0006.dcm', 'DCM/Task1/ImagesTr/10001/IMG0007.dcm', 'DCM/Task1/ImagesTr/10001/IMG0008.dcm', 'DCM/Task1/ImagesTr/10001/IMG0009.dcm', 'DCM/Task1/ImagesTr/10001/IMG0010.dcm', 'DCM/Task1/ImagesTr/10001/IMG0011.dcm', 'DCM/Task1/ImagesTr/10001/IMG0012.dcm', 'DCM/Task1/ImagesTr/10001/IMG0013.dcm', 'DCM/Task1/ImagesTr/10001/IMG0014.dcm', 'DCM/Task1/ImagesTr/10001/IMG0015.dcm', 'DCM/Task1/ImagesTr/10001/IMG0016.dcm', 'DCM/Task1/ImagesTr/10001/IMG0017.dcm', 'DCM/Task1/ImagesTr/10001/IMG0018.dcm', 'DCM/Task1/ImagesTr/10001/IMG0019.dcm', 'DCM/Task1/ImagesTr/10001/IMG0020.dcm', 'DCM/Task1/ImagesTr/10001/IMG0021.dcm', 'DCM/Task1/ImagesTr/10001/IMG0022.dcm', 'DCM/Task1/ImagesTr/10001/IMG0023.dcm', 'DCM/Task1/ImagesTr/10001/IMG0024.dcm', 'DCM/Task1/ImagesTr/10001/IMG0025.dcm', 'DCM/Task1/ImagesTr/10001/IMG0026.dcm', 'DCM/Task1/ImagesTr/10001/IMG0027.dcm', 'DCM/Task1/ImagesTr/10001/IMG0028.dcm', 'DCM/Task1/ImagesTr/10001/IMG0029.dcm', 'DCM/Task1/ImagesTr/10001/IMG0030.dcm', 'DCM/Task1/ImagesTr/10001/IMG0031.dcm', 'DCM/Task1/ImagesTr/10001/IMG0032.dcm', 'DCM/Task1/ImagesTr/10001/IMG0033.dcm', 'DCM/Task1/ImagesTr/10001/IMG0034.dcm', 'DCM/Task1/ImagesTr/10001/IMG0035.dcm', 'DCM/Task1/ImagesTr/10001/IMG0036.dcm', 'DCM/Task1/ImagesTr/10001/IMG0037.dcm', 'DCM/Task1/ImagesTr/10001/IMG0038.dcm', 'DCM/Task1/ImagesTr/10001/IMG0039.dcm', 'DCM/Task1/ImagesTr/10001/IMG0040.dcm', 'DCM/Task1/ImagesTr/10001/IMG0041.dcm', 'DCM/Task1/ImagesTr/10001/IMG0042.dcm', 'DCM/Task1/ImagesTr/10001/IMG0043.dcm', 'DCM/Task1/ImagesTr/10001/IMG0044.dcm', 'DCM/Task1/ImagesTr/10001/IMG0045.dcm', 'DCM/Task1/ImagesTr/10001/IMG0046.dcm', 'DCM/Task1/ImagesTr/10001/IMG0047.dcm', 'DCM/Task1/ImagesTr/10001/IMG0048.dcm', 'DCM/Task1/ImagesTr/10001/IMG0049.dcm', 'DCM/Task1/ImagesTr/10001/IMG0050.dcm', 'DCM/Task1/ImagesTr/10001/IMG0051.dcm', 'DCM/Task1/ImagesTr/10001/IMG0052.dcm', 'DCM/Task1/ImagesTr/10001/IMG0053.dcm', 'DCM/Task1/ImagesTr/10001/IMG0054.dcm', 'DCM/Task1/ImagesTr/10001/IMG0055.dcm', 'DCM/Task1/ImagesTr/10001/IMG0056.dcm', 'DCM/Task1/ImagesTr/10001/IMG0057.dcm', 'DCM/Task1/ImagesTr/10001/IMG0058.dcm', 'DCM/Task1/ImagesTr/10001/IMG0059.dcm', 'DCM/Task1/ImagesTr/10001/IMG0060.dcm', 'DCM/Task1/ImagesTr/10001/IMG0061.dcm', 'DCM/Task1/ImagesTr/10001/IMG0062.dcm', 'DCM/Task1/ImagesTr/10001/IMG0063.dcm', 'DCM/Task1/ImagesTr/10001/IMG0064.dcm', 'DCM/Task1/ImagesTr/10001/IMG0065.dcm', 'DCM/Task1/ImagesTr/10001/IMG0066.dcm', 'DCM/Task1/ImagesTr/10001/IMG0067.dcm', 'DCM/Task1/ImagesTr/10001/IMG0068.dcm', 'DCM/Task1/ImagesTr/10001/IMG0069.dcm', 'DCM/Task1/ImagesTr/10001/IMG0070.dcm', 'DCM/Task1/ImagesTr/10001/IMG0071.dcm', 'DCM/Task1/ImagesTr/10001/IMG0072.dcm', 'DCM/Task1/ImagesTr/10002/IMG0001.dcm', 'DCM/Task1/ImagesTr/10002/IMG0002.dcm', 'DCM/Task1/ImagesTr/10002/IMG0003.dcm', 'DCM/Task1/ImagesTr/10002/IMG0004.dcm', 'DCM/Task1/ImagesTr/10002/IMG0005.dcm', 'DCM/Task1/ImagesTr/10002/IMG0006.dcm']\n",
-            "Sample mask : ['DCM/Task1/LabelsTr/10000/IMG0001.dcm', 'DCM/Task1/LabelsTr/10000/IMG0002.dcm', 'DCM/Task1/LabelsTr/10000/IMG0003.dcm', 'DCM/Task1/LabelsTr/10000/IMG0004.dcm', 'DCM/Task1/LabelsTr/10000/IMG0005.dcm', 'DCM/Task1/LabelsTr/10000/IMG0006.dcm', 'DCM/Task1/LabelsTr/10000/IMG0007.dcm', 'DCM/Task1/LabelsTr/10000/IMG0008.dcm', 'DCM/Task1/LabelsTr/10000/IMG0009.dcm', 'DCM/Task1/LabelsTr/10000/IMG0010.dcm', 'DCM/Task1/LabelsTr/10000/IMG0011.dcm', 'DCM/Task1/LabelsTr/10000/IMG0012.dcm', 'DCM/Task1/LabelsTr/10000/IMG0013.dcm', 'DCM/Task1/LabelsTr/10000/IMG0014.dcm', 'DCM/Task1/LabelsTr/10000/IMG0015.dcm', 'DCM/Task1/LabelsTr/10000/IMG0016.dcm', 'DCM/Task1/LabelsTr/10000/IMG0017.dcm', 'DCM/Task1/LabelsTr/10000/IMG0018.dcm', 'DCM/Task1/LabelsTr/10000/IMG0019.dcm', 'DCM/Task1/LabelsTr/10000/IMG0020.dcm', 'DCM/Task1/LabelsTr/10000/IMG0021.dcm', 'DCM/Task1/LabelsTr/10000/IMG0022.dcm', 'DCM/Task1/LabelsTr/10000/IMG0023.dcm', 'DCM/Task1/LabelsTr/10000/IMG0024.dcm', 'DCM/Task1/LabelsTr/10000/IMG0025.dcm', 'DCM/Task1/LabelsTr/10000/IMG0026.dcm', 'DCM/Task1/LabelsTr/10000/IMG0027.dcm', 'DCM/Task1/LabelsTr/10000/IMG0028.dcm', 'DCM/Task1/LabelsTr/10000/IMG0029.dcm', 'DCM/Task1/LabelsTr/10000/IMG0030.dcm', 'DCM/Task1/LabelsTr/10000/IMG0031.dcm', 'DCM/Task1/LabelsTr/10000/IMG0032.dcm', 'DCM/Task1/LabelsTr/10000/IMG0033.dcm', 'DCM/Task1/LabelsTr/10000/IMG0034.dcm', 'DCM/Task1/LabelsTr/10000/IMG0035.dcm', 'DCM/Task1/LabelsTr/10000/IMG0036.dcm', 'DCM/Task1/LabelsTr/10000/IMG0037.dcm', 'DCM/Task1/LabelsTr/10000/IMG0038.dcm', 'DCM/Task1/LabelsTr/10000/IMG0039.dcm', 'DCM/Task1/LabelsTr/10000/IMG0040.dcm', 'DCM/Task1/LabelsTr/10000/IMG0041.dcm', 'DCM/Task1/LabelsTr/10000/IMG0042.dcm', 'DCM/Task1/LabelsTr/10000/IMG0043.dcm', 'DCM/Task1/LabelsTr/10000/IMG0044.dcm', 'DCM/Task1/LabelsTr/10000/IMG0045.dcm', 'DCM/Task1/LabelsTr/10000/IMG0046.dcm', 'DCM/Task1/LabelsTr/10000/IMG0047.dcm', 'DCM/Task1/LabelsTr/10000/IMG0048.dcm', 'DCM/Task1/LabelsTr/10000/IMG0049.dcm', 'DCM/Task1/LabelsTr/10000/IMG0050.dcm', 'DCM/Task1/LabelsTr/10000/IMG0051.dcm', 'DCM/Task1/LabelsTr/10000/IMG0052.dcm', 'DCM/Task1/LabelsTr/10000/IMG0053.dcm', 'DCM/Task1/LabelsTr/10000/IMG0054.dcm', 'DCM/Task1/LabelsTr/10000/IMG0055.dcm', 'DCM/Task1/LabelsTr/10000/IMG0056.dcm', 'DCM/Task1/LabelsTr/10000/IMG0057.dcm', 'DCM/Task1/LabelsTr/10000/IMG0058.dcm', 'DCM/Task1/LabelsTr/10000/IMG0059.dcm', 'DCM/Task1/LabelsTr/10000/IMG0060.dcm', 'DCM/Task1/LabelsTr/10000/IMG0061.dcm', 'DCM/Task1/LabelsTr/10000/IMG0062.dcm', 'DCM/Task1/LabelsTr/10000/IMG0063.dcm', 'DCM/Task1/LabelsTr/10000/IMG0064.dcm', 'DCM/Task1/LabelsTr/10000/IMG0065.dcm', 'DCM/Task1/LabelsTr/10000/IMG0066.dcm', 'DCM/Task1/LabelsTr/10000/IMG0067.dcm', 'DCM/Task1/LabelsTr/10000/IMG0068.dcm', 'DCM/Task1/LabelsTr/10000/IMG0069.dcm', 'DCM/Task1/LabelsTr/10000/IMG0070.dcm', 'DCM/Task1/LabelsTr/10000/IMG0071.dcm', 'DCM/Task1/LabelsTr/10000/IMG0072.dcm', 'DCM/Task1/LabelsTr/10001/IMG0001.dcm', 'DCM/Task1/LabelsTr/10001/IMG0002.dcm', 'DCM/Task1/LabelsTr/10001/IMG0003.dcm', 'DCM/Task1/LabelsTr/10001/IMG0004.dcm', 'DCM/Task1/LabelsTr/10001/IMG0005.dcm', 'DCM/Task1/LabelsTr/10001/IMG0006.dcm', 'DCM/Task1/LabelsTr/10001/IMG0007.dcm', 'DCM/Task1/LabelsTr/10001/IMG0008.dcm', 'DCM/Task1/LabelsTr/10001/IMG0009.dcm', 'DCM/Task1/LabelsTr/10001/IMG0010.dcm', 'DCM/Task1/LabelsTr/10001/IMG0011.dcm', 'DCM/Task1/LabelsTr/10001/IMG0012.dcm', 'DCM/Task1/LabelsTr/10001/IMG0013.dcm', 'DCM/Task1/LabelsTr/10001/IMG0014.dcm', 'DCM/Task1/LabelsTr/10001/IMG0015.dcm', 'DCM/Task1/LabelsTr/10001/IMG0016.dcm', 'DCM/Task1/LabelsTr/10001/IMG0017.dcm', 'DCM/Task1/LabelsTr/10001/IMG0018.dcm', 'DCM/Task1/LabelsTr/10001/IMG0019.dcm', 'DCM/Task1/LabelsTr/10001/IMG0020.dcm', 'DCM/Task1/LabelsTr/10001/IMG0021.dcm', 'DCM/Task1/LabelsTr/10001/IMG0022.dcm', 'DCM/Task1/LabelsTr/10001/IMG0023.dcm', 'DCM/Task1/LabelsTr/10001/IMG0024.dcm', 'DCM/Task1/LabelsTr/10001/IMG0025.dcm', 'DCM/Task1/LabelsTr/10001/IMG0026.dcm', 'DCM/Task1/LabelsTr/10001/IMG0027.dcm', 'DCM/Task1/LabelsTr/10001/IMG0028.dcm', 'DCM/Task1/LabelsTr/10001/IMG0029.dcm', 'DCM/Task1/LabelsTr/10001/IMG0030.dcm', 'DCM/Task1/LabelsTr/10001/IMG0031.dcm', 'DCM/Task1/LabelsTr/10001/IMG0032.dcm', 'DCM/Task1/LabelsTr/10001/IMG0033.dcm', 'DCM/Task1/LabelsTr/10001/IMG0034.dcm', 'DCM/Task1/LabelsTr/10001/IMG0035.dcm', 'DCM/Task1/LabelsTr/10001/IMG0036.dcm', 'DCM/Task1/LabelsTr/10001/IMG0037.dcm', 'DCM/Task1/LabelsTr/10001/IMG0038.dcm', 'DCM/Task1/LabelsTr/10001/IMG0039.dcm', 'DCM/Task1/LabelsTr/10001/IMG0040.dcm', 'DCM/Task1/LabelsTr/10001/IMG0041.dcm', 'DCM/Task1/LabelsTr/10001/IMG0042.dcm', 'DCM/Task1/LabelsTr/10001/IMG0043.dcm', 'DCM/Task1/LabelsTr/10001/IMG0044.dcm', 'DCM/Task1/LabelsTr/10001/IMG0045.dcm', 'DCM/Task1/LabelsTr/10001/IMG0046.dcm', 'DCM/Task1/LabelsTr/10001/IMG0047.dcm', 'DCM/Task1/LabelsTr/10001/IMG0048.dcm', 'DCM/Task1/LabelsTr/10001/IMG0049.dcm', 'DCM/Task1/LabelsTr/10001/IMG0050.dcm', 'DCM/Task1/LabelsTr/10001/IMG0051.dcm', 'DCM/Task1/LabelsTr/10001/IMG0052.dcm', 'DCM/Task1/LabelsTr/10001/IMG0053.dcm', 'DCM/Task1/LabelsTr/10001/IMG0054.dcm', 'DCM/Task1/LabelsTr/10001/IMG0055.dcm', 'DCM/Task1/LabelsTr/10001/IMG0056.dcm', 'DCM/Task1/LabelsTr/10001/IMG0057.dcm', 'DCM/Task1/LabelsTr/10001/IMG0058.dcm', 'DCM/Task1/LabelsTr/10001/IMG0059.dcm', 'DCM/Task1/LabelsTr/10001/IMG0060.dcm', 'DCM/Task1/LabelsTr/10001/IMG0061.dcm', 'DCM/Task1/LabelsTr/10001/IMG0062.dcm', 'DCM/Task1/LabelsTr/10001/IMG0063.dcm', 'DCM/Task1/LabelsTr/10001/IMG0064.dcm', 'DCM/Task1/LabelsTr/10001/IMG0065.dcm', 'DCM/Task1/LabelsTr/10001/IMG0066.dcm', 'DCM/Task1/LabelsTr/10001/IMG0067.dcm', 'DCM/Task1/LabelsTr/10001/IMG0068.dcm', 'DCM/Task1/LabelsTr/10001/IMG0069.dcm', 'DCM/Task1/LabelsTr/10001/IMG0070.dcm', 'DCM/Task1/LabelsTr/10001/IMG0071.dcm', 'DCM/Task1/LabelsTr/10001/IMG0072.dcm', 'DCM/Task1/LabelsTr/10002/IMG0001.dcm', 'DCM/Task1/LabelsTr/10002/IMG0002.dcm', 'DCM/Task1/LabelsTr/10002/IMG0003.dcm', 'DCM/Task1/LabelsTr/10002/IMG0004.dcm', 'DCM/Task1/LabelsTr/10002/IMG0005.dcm', 'DCM/Task1/LabelsTr/10002/IMG0006.dcm']\n"
+            "Drive already mounted at /content/drive; to attempt to forcibly remount, call drive.mount(\"/content/drive\", force_remount=True).\n",
+            "Folders found: ['10000', '10001', '10002', '10006', '10007', '10011', '10012', '10014', '10015', '10016']... Total: 92\n",
+            "Total paired slices: 6816\n",
+            "Sample image: ['DCM/Task1/ImagesTr/10000/IMG0001.dcm', 'DCM/Task1/ImagesTr/10000/IMG0002.dcm', 'DCM/Task1/ImagesTr/10000/IMG0003.dcm']\n",
+            "Sample mask : ['DCM/Task1/LabelsTr/10000/IMG0001.dcm', 'DCM/Task1/LabelsTr/10000/IMG0002.dcm', 'DCM/Task1/LabelsTr/10000/IMG0003.dcm']\n"
           ]
         }
       ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "from sklearn.model_selection import train_test_split\n",
+        "\n",
+        "train_imgs, val_imgs, train_lbls, val_lbls = train_test_split(\n",
+        "    img_files, lbl_files, test_size=0.2, random_state=42\n",
+        ")\n",
+        "\n",
+        "print(f'Train: {len(train_imgs)}, Val: {len(val_imgs)}')"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "Squ_2v7I7oVq",
+        "outputId": "755e9a93-6a2a-4a93-d3f0-3b31861bd3b6"
+      },
+      "execution_count": 3,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Train: 5452, Val: 1364\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "import numpy as np, pydicom, io\n",
+        "from torch.utils.data import Dataset\n",
+        "from torchvision import transforms\n",
+        "from PIL import Image\n",
+        "\n",
+        "class ZipDicomSliceDataset(Dataset):\n",
+        "    def __init__(self, zip_path, img_files, lbl_files, target_size=(256,256)):\n",
+        "        self.zip_path = zip_path\n",
+        "        self.img_files = img_files\n",
+        "        self.lbl_files = lbl_files\n",
+        "        self.target_size = target_size\n",
+        "        self.to_tensor = transforms.ToTensor()\n",
+        "        self.resize = transforms.Resize(self.target_size, interpolation=Image.NEAREST)\n",
+        "\n",
+        "    def __len__(self): return len(self.img_files)\n",
+        "\n",
+        "    def __getitem__(self, idx):\n",
+        "        with zipfile.ZipFile(self.zip_path) as z:\n",
+        "            img_bytes = z.read(self.img_files[idx])\n",
+        "            mask_bytes = z.read(self.lbl_files[idx])\n",
+        "        img_dcm = pydicom.dcmread(io.BytesIO(img_bytes))\n",
+        "        mask_dcm = pydicom.dcmread(io.BytesIO(mask_bytes))\n",
+        "        image = img_dcm.pixel_array.astype(np.float32)\n",
+        "        image = (image - np.min(image)) / (np.max(image) - np.min(image) + 1e-7)\n",
+        "        mask_arr = mask_dcm.pixel_array.astype(np.float32)\n",
+        "        mask_bin = ((mask_arr == 1.0) | (mask_arr == 2.0)).astype(np.float32)\n",
+        "        image = self.resize(Image.fromarray((image * 255).astype(np.uint8)))\n",
+        "        mask = self.resize(Image.fromarray((mask_bin * 255).astype(np.uint8)))\n",
+        "        image = self.to_tensor(image)\n",
+        "        mask = self.to_tensor(mask)\n",
+        "        mask = (mask > 0.5).float()\n",
+        "        # Diagnostic print for the first few samples\n",
+        "        if idx<3:\n",
+        "            print(f\"Sample {idx}: image shape {image.shape}, mask unique {mask.unique().tolist()}\")\n",
+        "        return image, mask\n"
+      ],
+      "metadata": {
+        "id": "rWxlJnckpyBR"
+      },
+      "execution_count": 4,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "from torch.utils.data import DataLoader\n",
+        "\n",
+        "train_loader = DataLoader(\n",
+        "    ZipDicomSliceDataset(zip_path, train_imgs, train_lbls),\n",
+        "    batch_size=16, shuffle=True, num_workers=0\n",
+        ")\n",
+        "val_loader = DataLoader(\n",
+        "    ZipDicomSliceDataset(zip_path, val_imgs, val_lbls),\n",
+        "    batch_size=16, shuffle=False, num_workers=0\n",
+        ")\n",
+        "\n",
+        "# Check first batch shape\n",
+        "imgs, masks = next(iter(train_loader))\n",
+        "print(f\"Batch shape: {imgs.shape}, {masks.shape}\")\n"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "SbzRkRqInQH3",
+        "outputId": "bdb546ba-d402-478f-a8fb-952adffd6340"
+      },
+      "execution_count": 5,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Batch shape: torch.Size([16, 1, 256, 256]), torch.Size([16, 1, 256, 256])\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "import torch.nn as nn\n",
+        "import torch.nn.functional as F\n",
+        "\n",
+        "class DoubleConv(nn.Module):\n",
+        "    def __init__(self, in_channels, out_channels):\n",
+        "        super().__init__()\n",
+        "        self.double_conv = nn.Sequential(\n",
+        "            nn.Conv2d(in_channels, out_channels, 3, padding=1),\n",
+        "            nn.BatchNorm2d(out_channels),\n",
+        "            nn.ReLU(inplace=True),\n",
+        "            nn.Conv2d(out_channels, out_channels, 3, padding=1),\n",
+        "            nn.BatchNorm2d(out_channels),\n",
+        "            nn.ReLU(inplace=True)\n",
+        "        )\n",
+        "    def forward(self, x):\n",
+        "        return self.double_conv(x)\n",
+        "\n",
+        "class UNet(nn.Module):\n",
+        "    def __init__(self, in_channels=1, out_channels=1, features=[64,128,256,512]):\n",
+        "        super().__init__()\n",
+        "        self.downs = nn.ModuleList()\n",
+        "        self.ups = nn.ModuleList()\n",
+        "        for feature in features:\n",
+        "            self.downs.append(DoubleConv(in_channels, feature))\n",
+        "            in_channels = feature\n",
+        "        for feature in reversed(features):\n",
+        "            self.ups.append(nn.ConvTranspose2d(feature*2, feature, 2, stride=2))\n",
+        "            self.ups.append(DoubleConv(feature*2, feature))\n",
+        "        self.bottleneck = DoubleConv(features[-1], features[-1]*2)\n",
+        "        self.final_conv = nn.Conv2d(features[0], out_channels, 1)\n",
+        "    def forward(self, x):\n",
+        "        skip_connections = []\n",
+        "        for down in self.downs:\n",
+        "            x = down(x)\n",
+        "            skip_connections.append(x)\n",
+        "            x = F.max_pool2d(x, 2)\n",
+        "        x = self.bottleneck(x)\n",
+        "        skip_connections = skip_connections[::-1]\n",
+        "        for idx in range(0, len(self.ups), 2):\n",
+        "            x = self.ups[idx](x)\n",
+        "            skip_conn = skip_connections[idx//2]\n",
+        "            if x.shape != skip_conn.shape:\n",
+        "                x = F.interpolate(x, size=skip_conn.shape[2:])\n",
+        "            x = torch.cat((skip_conn, x), dim=1)\n",
+        "            x = self.ups[idx+1](x)\n",
+        "        return self.final_conv(x)\n"
+      ],
+      "metadata": {
+        "id": "rHX9rNxRntCR"
+      },
+      "execution_count": 6,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "import torch, time\n",
+        "\n",
+        "device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')\n",
+        "model = UNet().to(device)\n",
+        "criterion = nn.BCEWithLogitsLoss()\n",
+        "optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)\n",
+        "epochs = 1\n",
+        "\n",
+        "train_losses, val_losses = [], []\n",
+        "\n",
+        "for epoch in range(epochs):\n",
+        "    start_epoch = time.time()\n",
+        "    model.train()\n",
+        "    running_loss = 0.0\n",
+        "    for bi, (imgs, masks) in enumerate(train_loader):\n",
+        "        batch_start = time.time()\n",
+        "        imgs, masks = imgs.to(device), masks.to(device)\n",
+        "        optimizer.zero_grad()\n",
+        "        outputs = model(imgs)\n",
+        "        loss = criterion(outputs, masks)\n",
+        "        loss.backward()\n",
+        "        optimizer.step()\n",
+        "        running_loss += loss.item() * imgs.size(0)\n",
+        "        if bi % 10 == 0:\n",
+        "            print(f'Epoch {epoch+1} - Batch {bi}: batch time {(time.time()-batch_start):.2f}s, batch loss={loss.item():.4f}')\n",
+        "\n",
+        "    train_loss = running_loss / len(train_loader.dataset)\n",
+        "    train_losses.append(train_loss)\n",
+        "\n",
+        "    # Validation\n",
+        "    model.eval()\n",
+        "    val_loss = 0.0\n",
+        "    with torch.no_grad():\n",
+        "        for vbi, (imgs, masks) in enumerate(val_loader):\n",
+        "            imgs, masks = imgs.to(device), masks.to(device)\n",
+        "            outputs = model(imgs)\n",
+        "            loss = criterion(outputs, masks)\n",
+        "            val_loss += loss.item() * imgs.size(0)\n",
+        "            if vbi==0:\n",
+        "                print(f\"Validation batch shape: {imgs.shape}\")\n",
+        "    val_loss = val_loss / len(val_loader.dataset)\n",
+        "    val_losses.append(val_loss)\n",
+        "    print(f\"Epoch {epoch+1}: Train Loss={train_loss:.4f} Val Loss={val_loss:.4f}\")\n",
+        "    print(f\"Epoch {epoch+1} time: {(time.time()-start_epoch)/60:.2f} min\")\n"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "_i0oAEw7oIMY",
+        "outputId": "65947385-e5c2-4761-c89f-de12046371ca"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Epoch 1 - Batch 0: batch time 107.24s, batch loss=0.8786\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [],
+      "metadata": {
+        "id": "fJ8HVsfouTr4"
+      }
     }
   ]
 }
